@@ -11,6 +11,12 @@ spring:
     show-sql: false
     open-in-view: false
 
+jwt:
+  # Dev-only default. Never use this value outside local development —
+  # override with a real secret via the JWT_SECRET env var before deploying anywhere.
+  secret: ${JWT_SECRET:dev-only-jwt-signing-secret-change-me-before-any-real-deployment}
+  expiration-ms: ${JWT_EXPIRATION_MS:86400000} # 24 hours
+
 management:
   endpoints:
     web:
