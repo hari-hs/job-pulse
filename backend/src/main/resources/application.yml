@@ -10,6 +10,20 @@ spring:
       ddl-auto: none
     show-sql: false
     open-in-view: false
+  mail:
+    # Points at Mailhog locally (docker-compose). A prod profile would
+    # override these to a real SMTP/SES endpoint -- the EmailSender
+    # interface means the reminder scheduler's code never changes either way.
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+
+jobpulse:
+  mail:
+    from: ${MAIL_FROM:noreply@jobpulse.local}
+
+reminder:
+  scheduler:
+    fixed-delay-ms: ${REMINDER_SCHEDULER_FIXED_DELAY_MS:300000} # 5 minutes, per DESIGN.md §9
 
 jwt:
   # Dev-only default. Never use this value outside local development —

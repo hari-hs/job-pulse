@@ -1,12 +1,14 @@
 package com.jobpulse.reminder;
 
 /**
- * PENDING -> SENT or PENDING -> FAILED, driven by the scheduled email job
- * that arrives in M5. Every reminder created through this milestone's API
- * starts and stays PENDING -- nothing in M4 transitions it.
+ * PENDING -> PROCESSING -> SENT, or PENDING -> PROCESSING -> FAILED.
+ * PROCESSING is the scheduler's atomic claim state (see ReminderScheduler):
+ * a reminder is only ever moved out of PENDING by winning a conditional
+ * UPDATE, which is what makes concurrent/overlapping job runs safe.
  */
 public enum ReminderStatus {
     PENDING,
+    PROCESSING,
     SENT,
     FAILED
 }

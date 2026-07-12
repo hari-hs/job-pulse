@@ -8,7 +8,9 @@ import com.jobpulse.reminder.dto.ReminderResponse;
 import com.jobpulse.user.User;
 import com.jobpulse.user.UserRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 
 @Service
@@ -52,6 +54,27 @@ public class ReminderService {
         Reminder reminder = reminderRepository.findByIdAndApplication_User_Id(reminderId, user.getId())
                 .orElseThrow(() -> new ReminderNotFoundException(reminderId));
         reminderRepository.delete(reminder);
+    }
+
+    /** Reminders due now, with their application/user already loaded -- for the scheduler only, not exposed via HTTP. */
+    public List<Reminder> findDueForSending() {
+        return reminderRepository.findDueForSending(Instant.now());
+    }
+
+    /** Attempts to claim a due reminder. False means another run already claimed it -- not an error, just skip it. */
+    @Transactional
+    public boolean claim(Long reminderId) {
+        return reminderRepository.claim(reminderId) == 1;
+    }
+
+    @Transactional
+    public void markSent(Long reminderId) {
+        reminderRepository.markSent(reminderId, Instant.now());
+    }
+
+    @Transactional
+    public void markFailed(Long reminderId) {
+        reminderRepository.markFailed(reminderId);
     }
 
     private JobApplication findOwnedApplication(String email, Long applicationId) {
