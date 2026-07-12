@@ -1,8 +1,15 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
-import { createApplication, deleteApplication, getApplications, updateApplication } from '../../api/applications'
+import {
+  changeApplicationStatus,
+  createApplication,
+  deleteApplication,
+  getApplications,
+  updateApplication,
+} from '../../api/applications'
 import ApplicationList from './ApplicationList'
 import ApplicationForm from './ApplicationForm'
+import StatusHistoryModal from './StatusHistoryModal'
 
 export default function ApplicationsPage() {
   const { email, fullName, logout } = useAuth()
@@ -10,6 +17,7 @@ export default function ApplicationsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [editing, setEditing] = useState(null) // null | 'new' | application object
+  const [viewingHistoryFor, setViewingHistoryFor] = useState(null) // null | application object
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -45,6 +53,18 @@ export default function ApplicationsPage() {
     await load()
   }
 
+  async function handleStatusChange(app, newStatus) {
+    if (newStatus === app.status) {
+      return
+    }
+    try {
+      await changeApplicationStatus(app.id, newStatus, null)
+      await load()
+    } catch {
+      setError('Failed to update status.')
+    }
+  }
+
   return (
     <div className="page">
       <header className="page-header">
@@ -68,7 +88,13 @@ export default function ApplicationsPage() {
       {loading ? (
         <p>Loading…</p>
       ) : (
-        <ApplicationList applications={applications} onEdit={setEditing} onDelete={handleDelete} />
+        <ApplicationList
+          applications={applications}
+          onEdit={setEditing}
+          onDelete={handleDelete}
+          onStatusChange={handleStatusChange}
+          onViewHistory={setViewingHistoryFor}
+        />
       )}
 
       {editing && (
@@ -77,6 +103,10 @@ export default function ApplicationsPage() {
           onSave={handleSave}
           onCancel={() => setEditing(null)}
         />
+      )}
+
+      {viewingHistoryFor && (
+        <StatusHistoryModal application={viewingHistoryFor} onClose={() => setViewingHistoryFor(null)} />
       )}
     </div>
   )

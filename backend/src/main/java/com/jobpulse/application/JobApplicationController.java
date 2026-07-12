@@ -2,6 +2,8 @@ package com.jobpulse.application;
 
 import com.jobpulse.application.dto.JobApplicationRequest;
 import com.jobpulse.application.dto.JobApplicationResponse;
+import com.jobpulse.application.dto.StatusChangeRequest;
+import com.jobpulse.application.dto.StatusHistoryEntryResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -9,6 +11,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -60,5 +63,19 @@ public class JobApplicationController {
     public ResponseEntity<Void> delete(@AuthenticationPrincipal UserDetails principal, @PathVariable Long id) {
         jobApplicationService.delete(principal.getUsername(), id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id}/status")
+    public JobApplicationResponse changeStatus(
+            @AuthenticationPrincipal UserDetails principal,
+            @PathVariable Long id,
+            @Valid @RequestBody StatusChangeRequest request
+    ) {
+        return jobApplicationService.changeStatus(principal.getUsername(), id, request);
+    }
+
+    @GetMapping("/{id}/history")
+    public List<StatusHistoryEntryResponse> history(@AuthenticationPrincipal UserDetails principal, @PathVariable Long id) {
+        return jobApplicationService.getHistory(principal.getUsername(), id);
     }
 }

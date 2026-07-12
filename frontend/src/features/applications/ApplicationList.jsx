@@ -1,6 +1,6 @@
-import { formatStatus } from './constants'
+import { APPLICATION_STATUSES, formatStatus } from './constants'
 
-export default function ApplicationList({ applications, onEdit, onDelete }) {
+export default function ApplicationList({ applications, onEdit, onDelete, onStatusChange, onViewHistory }) {
   if (applications.length === 0) {
     return <p className="empty-state">No applications yet. Add your first one above.</p>
   }
@@ -23,13 +23,24 @@ export default function ApplicationList({ applications, onEdit, onDelete }) {
             <td>{app.companyName}</td>
             <td>{app.jobTitle}</td>
             <td>
-              <span className={`status-badge status-${app.status.toLowerCase()}`}>
-                {formatStatus(app.status)}
-              </span>
+              <select
+                className={`status-select status-${app.status.toLowerCase()}`}
+                value={app.status}
+                onChange={(e) => onStatusChange(app, e.target.value)}
+              >
+                {APPLICATION_STATUSES.map((s) => (
+                  <option key={s} value={s}>
+                    {formatStatus(s)}
+                  </option>
+                ))}
+              </select>
             </td>
             <td>{app.appliedDate || '—'}</td>
             <td>{app.location || '—'}</td>
             <td className="row-actions">
+              <button type="button" onClick={() => onViewHistory(app)}>
+                History
+              </button>
               <button type="button" onClick={() => onEdit(app)}>
                 Edit
               </button>

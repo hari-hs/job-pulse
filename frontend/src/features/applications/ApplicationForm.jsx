@@ -50,16 +50,18 @@ export default function ApplicationForm({ initial, onSave, onCancel }) {
           Job URL
           <input value={form.jobUrl || ''} onChange={(e) => update('jobUrl', e.target.value)} />
         </label>
-        <label>
-          Status *
-          <select value={form.status} onChange={(e) => update('status', e.target.value)} required>
-            {APPLICATION_STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {formatStatus(s)}
-              </option>
-            ))}
-          </select>
-        </label>
+        {!initial && (
+          <label>
+            Status *
+            <select value={form.status} onChange={(e) => update('status', e.target.value)} required>
+              {APPLICATION_STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {formatStatus(s)}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <label>
           Applied date
           <input

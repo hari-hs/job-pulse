@@ -15,3 +15,11 @@ export function updateApplication(id, data) {
 export function deleteApplication(id) {
   return client.delete(`/applications/${id}`)
 }
+
+export function changeApplicationStatus(id, status, note) {
+  return client.patch(`/applications/${id}/status`, { status, note }).then((res) => res.data)
+}
+
+export function getApplicationHistory(id) {
+  return client.get(`/applications/${id}/history`).then((res) => res.data)
+}
