@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: job-pulse-backend
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/${DB_NAME:jobpulse}
+    username: ${DB_USER:jobpulse}
+    password: ${DB_PASSWORD:jobpulse}
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    open-in-view: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always

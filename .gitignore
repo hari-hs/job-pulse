@@ -1,0 +1,14 @@
+# OS
+.DS_Store
+
+# Environment / secrets
+.env
+.env.local
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Claude Code local session config
+.claude/
