@@ -6,9 +6,9 @@ _A junior-engineer-level walkthrough of everything Milestone 2 added: every new 
 
 ## What M2 delivers
 
-`DESIGN.md`'s roadmap (§11) scopes M2 as "Applications CRUD: Backend endpoints + entity/schema, minimal frontend list/form." **This milestone covers the backend half only** — the frontend list/form was deliberately deferred (asked and confirmed explicitly before starting) since the frontend is still the untouched Vite/React demo page from M0, and mixing a first real UI screen into the same pass as new backend endpoints would make both harder to verify cleanly. The frontend remains a clean follow-up.
+`DESIGN.md`'s roadmap (§11) scopes M2 as "Applications CRUD: Backend endpoints + entity/schema, minimal frontend list/form." This milestone shipped in two passes: **backend first** (CRUD endpoints, entity, migration — asked and confirmed explicitly before starting, since the frontend was still the untouched Vite/React demo page from M0 and mixing a first real UI screen into the same pass as new backend endpoints would've made both harder to verify cleanly), then **the frontend list/form as a follow-up** once the API was solid. Both halves are covered in this one document.
 
-What's live by the end of this milestone:
+What's live by the end of the backend pass:
 
 - `POST /api/applications` — create a job application, owned by whoever's JWT made the request
 - `GET /api/applications` — list the current user's applications
@@ -275,6 +275,136 @@ That two-user isolation test is the one genuinely new kind of check this milesto
 
 ---
 
+## The frontend — replacing the M0 demo page
+
+This is the first milestone with any real frontend work at all — everything in `frontend/src` until now was the untouched Vite/React scaffold from M0 (a counter button and framework logos). Scope here matches DESIGN.md's own words for M2: a *minimal* list/form, not the polished, protected-routes, error-boundary experience that's explicitly M8's job later in the roadmap.
+
+### New dependency: `axios`
+
+DESIGN.md's architecture diagram names it explicitly ("React SPA (Vite, Axios, JWT stored in memory)"), so rather than hand-rolling a `fetch` wrapper, `axios` was added via `npm install axios` (confirmed with the user first, since it's a new dependency). The payoff shows up immediately in `src/api/client.js`:
+
+```js
+let authToken = null
+let unauthorizedHandler = null
+
+export function setAuthToken(token) { authToken = token }
+export function setUnauthorizedHandler(handler) { unauthorizedHandler = handler }
+
+const client = axios.create({ baseURL: '/api' })
+
+client.interceptors.request.use((config) => {
+  if (authToken) config.headers.Authorization = `Bearer ${authToken}`
+  return config
+})
+
+client.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401 && unauthorizedHandler) unauthorizedHandler()
+    return Promise.reject(error)
+  },
+)
+```
+
+Two things worth explaining:
+
+- **`authToken` is a plain module-level variable, not a React state value.** Axios interceptors run outside React's render tree — they have no `useState` to read from. So the token lives in ordinary JS memory here, and `AuthContext` (below) calls `setAuthToken(...)` every time the *React-visible* copy of the token changes, keeping the two in sync. This is also the literal implementation of DESIGN.md's "JWT stored in memory" choice — nothing here ever touches `localStorage` or a cookie, which means a page refresh logs the user out. That's a deliberate tradeoff (reduces the token's exposure to XSS-based theft, at the cost of session persistence), not an oversight.
+- **The response interceptor doubles as session-expiry handling.** Tokens are good for 24 hours (M1's `jwt.expiration-ms`). If one expires mid-session, the very next API call comes back `401`, and rather than the UI silently breaking on every subsequent request, this interceptor calls `unauthorizedHandler` — wired up to `logout()` — so the app falls back cleanly to the login screen instead of getting stuck.
+
+`src/api/auth.js` and `src/api/applications.js` are both thin: each just wraps one `client.get/post/put/delete` call per backend endpoint from earlier in this document, returning `res.data` so callers never see the axios response envelope.
+
+### Solving CORS: a Vite proxy, not backend changes
+
+`docs/milestone-0.md` flagged this as an open question back at M0: the frontend (`localhost:5173`) and backend (`localhost:8080`) are different origins, so a raw `fetch`/`axios` call from one to the other gets blocked by the browser unless something explicitly allows it. Two options were on the table — configure CORS in `SecurityConfig`, or add a Vite dev-server proxy. This milestone went with the proxy:
+
+```js
+// vite.config.js
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    proxy: { '/api': 'http://localhost:8080' },
+  },
+})
+```
+
+Every frontend API call targets a relative path (`baseURL: '/api'` above) rather than `http://localhost:8080/api`. The browser sees a same-origin request to `localhost:5173/api/...`; Vite's dev server silently forwards it to the real backend on 8080 and relays the response back. The browser never sees a cross-origin request in the first place, so there's nothing to grant permission for — and `SecurityConfig` didn't need a single line changed. (This proxy is dev-only, scoped to `vite dev`; a production deployment would need its own answer — likely real CORS config or serving both from the same origin behind a reverse proxy — but that's a problem for M9/M11, not now.)
+
+### `AuthContext` — the one piece of app-wide state
+
+```jsx
+export function AuthProvider({ children }) {
+  const [auth, setAuth] = useState(null) // { token, email, fullName } | null
+
+  const logout = useCallback(() => {
+    setAuthToken(null)
+    setAuth(null)
+  }, [])
+
+  useEffect(() => {
+    setUnauthorizedHandler(logout)
+  }, [logout])
+
+  const login = useCallback(async (email, password) => {
+    const data = await apiLogin(email, password)
+    setAuthToken(data.token)
+    setAuth({ token: data.token, email: data.email, fullName: data.fullName })
+  }, [])
+
+  // register() is the same shape as login(), calling apiRegister instead
+
+  return (
+    <AuthContext.Provider value={{ ...auth, login, register, logout }}>
+      {children}
+    </AuthContext.Provider>
+  )
+}
+```
+
+This is DESIGN.md §10's planned `context/AuthContext` — the single place that knows whether anyone is logged in. `{ ...auth, login, register, logout }` is a small trick worth noticing: when `auth` is `null` (nobody logged in yet), spreading `null` into an object literal is valid JavaScript and simply contributes no properties — so `token`/`email`/`fullName` come out as `undefined` on the context value, and `useAuth()` consumers can just check `if (token)` without a separate "is there even an `auth` object" check.
+
+### `AuthForm` — the minimal, deliberately-not-M8 auth screen
+
+A single component toggles between login and register modes, sharing one email/password pair of fields and a `fullName` field that only appears in register mode. This is a departure from DESIGN.md's milestone split worth naming honestly: full "auth UX, protected routes, error states" is M8's scope, not M2's. But without *some* way to create an account from the browser, the applications list/form this milestone is actually about would be undemonstrable to anyone without a pre-existing curl-made user — so the smallest possible slice of auth UI (one form, one toggle, no password reset, no remember-me, no route guarding) was pulled forward just far enough to make the rest of the milestone usable standalone.
+
+Errors surface directly from the backend's existing `ErrorResponse.message` field (`err.response?.data?.message`) — the clean, consistent error shape `GlobalExceptionHandler` established back in M1 pays off here with zero extra frontend error-parsing logic.
+
+### The applications feature — list, create, edit, delete
+
+`src/features/applications/` holds four files:
+
+- **`constants.js`** — a hardcoded `APPLICATION_STATUSES` array mirroring the backend's `ApplicationStatus` enum, since there's no endpoint exposing valid enum values yet. A small, deliberate duplication — worth revisiting if a metadata/config endpoint is ever added, but not worth building an endpoint for today.
+- **`ApplicationList.jsx`** — a plain table, one row per application, with a colored status badge and Edit/Delete buttons per row.
+- **`ApplicationForm.jsx`** — a modal covering both create and edit (same component, driven by whether an `initial` application object was passed in), matching the backend's single-`JobApplicationRequest`-for-both-operations design from earlier in this document. One small data-shape fix here: an empty date input produces `""`, which the backend's `LocalDate` field can't deserialize — the form converts that to `null` before sending (`appliedDate: form.appliedDate || null`).
+- **`ApplicationsPage.jsx`** — the container: loads the list on mount, tracks which application (if any) is being edited (`null` | `'new'` | the application object), and re-loads the list after every save/delete rather than trying to patch local state — simpler to reason about at this scale, even if it means one extra network round-trip per action.
+
+### What got deleted
+
+`App.jsx`, `App.css`, and `index.css` were fully rewritten (App.jsx now just renders `<AuthProvider><AppContent /></AuthProvider>` with `AppContent` conditionally showing `<AuthForm />` or `<ApplicationsPage />` based on whether a token exists). The M0 demo assets that nothing references anymore — `src/assets/react.svg`, `vite.svg`, `hero.png`, and `public/icons.svg` — were deleted outright rather than left as dead weight; `public/favicon.svg` was kept since `index.html` still uses it.
+
+One explicit scope cut worth naming: **no `react-router-dom`, no `routes/` folder, no `ProtectedRoute`** — despite DESIGN.md §10 listing all three in the recommended frontend structure. With exactly two "pages" (auth screen, applications screen) and no deep-linkable URLs needed yet, a single `token ? <ApplicationsPage/> : <AuthForm/>` conditional does the job with zero new dependencies. Real routing is explicitly named in M8 ("Protected routes, auth UX, error states") — this isn't a permanent decision, just not pulling it forward early.
+
+### Verifying it actually works in a browser
+
+Per this project's own standards (and general good practice for UI work), none of the above was accepted as done from reading the code alone — it needed to actually run in a browser. This repo has no pre-existing "launch and drive the app" project skill, and the environment's preferred tool for that (`chromium-cli`) wasn't available, so verification used a throwaway Playwright script set up in a scratch directory (`npm install playwright`, `npx playwright install chromium`, entirely outside the project — nothing added to `frontend/`'s own dependencies for this).
+
+The script drove the full lifecycle headlessly against the real running backend + frontend dev servers: load the app → register a brand-new user → confirm the empty-applications state → create an application → edit its status → delete it → confirm the empty state returns → log out → log back in with the same credentials (a sanity check on the *login* path specifically, since register was exercised first) — capturing a screenshot at each step and checking the browser console for errors throughout.
+
+| Step | Result |
+|---|---|
+| Auth screen loads (not the old Vite demo) | ✅ |
+| Register → lands on applications page, shows name, "No applications yet." | ✅ |
+| Create application → appears in table | ✅ |
+| Edit status → table reflects new status | ✅ |
+| Delete → empty state returns | ✅ |
+| Log out → back at auth screen | ✅ |
+| Log back in with same credentials | ✅ |
+| Console errors | none |
+| Uncaught page errors | none |
+
+Screenshots were reviewed directly (not just the pass/fail text) to catch anything a DOM-text assertion alone would miss — a broken layout, an unstyled modal, a backdrop that doesn't dim. All three checked screenshots (auth screen, populated table, edit modal) rendered cleanly.
+
+---
+
 ## What's next
 
-M3 (Status history) per the roadmap: an `application_status_history` table (append-only, the source of truth for "how long did this sit in each stage"), a `PATCH /api/applications/{id}/status` endpoint kept deliberately separate from the generic `PUT` (changing status is a distinct business action worth its own audit trail, not just another field edit), and a timeline view. The frontend list/form deferred from this milestone is also still open — whichever comes first is a scoping conversation for next session, same as M2's backend/frontend split was.
+M3 (Status history) per the roadmap: an `application_status_history` table (append-only, the source of truth for "how long did this sit in each stage"), a `PATCH /api/applications/{id}/status` endpoint kept deliberately separate from the generic `PUT` (changing status is a distinct business action worth its own audit trail, not just another field edit), and a timeline view — both a backend piece and, per the pattern this milestone established, likely a frontend follow-up once the API side is solid.
