@@ -2,6 +2,7 @@ package com.jobpulse.common;
 
 import com.jobpulse.application.JobApplicationNotFoundException;
 import com.jobpulse.auth.EmailAlreadyInUseException;
+import com.jobpulse.reminder.ReminderNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -21,6 +22,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(JobApplicationNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleJobApplicationNotFound(JobApplicationNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ErrorResponse(ex.getMessage()));
+    }
+
+    @ExceptionHandler(ReminderNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleReminderNotFound(ReminderNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ErrorResponse(ex.getMessage()));
     }
 
