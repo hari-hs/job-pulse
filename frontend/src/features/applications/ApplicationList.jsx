@@ -1,10 +1,6 @@
 import { APPLICATION_STATUSES, formatStatus } from './constants'
 
 export default function ApplicationList({ applications, onEdit, onDelete, onStatusChange, onViewHistory }) {
-  if (applications.length === 0) {
-    return <p className="empty-state">No applications yet. Add your first one above.</p>
-  }
-
   return (
     <table className="application-table">
       <thead>

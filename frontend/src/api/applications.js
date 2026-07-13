@@ -1,7 +1,12 @@
 import client from './client'
 
-export function getApplications() {
-  return client.get('/applications').then((res) => res.data)
+export function getApplications({ status, company, dateFrom, dateTo, page = 0, size = 20 } = {}) {
+  const params = { page, size }
+  if (status) params.status = status
+  if (company) params.company = company
+  if (dateFrom) params.dateFrom = dateFrom
+  if (dateTo) params.dateTo = dateTo
+  return client.get('/applications', { params }).then((res) => res.data)
 }
 
 export function createApplication(data) {

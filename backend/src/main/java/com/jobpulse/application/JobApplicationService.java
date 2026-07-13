@@ -4,11 +4,17 @@ import com.jobpulse.application.dto.JobApplicationRequest;
 import com.jobpulse.application.dto.JobApplicationResponse;
 import com.jobpulse.application.dto.StatusChangeRequest;
 import com.jobpulse.application.dto.StatusHistoryEntryResponse;
+import com.jobpulse.common.PageResponse;
 import com.jobpulse.user.User;
 import com.jobpulse.user.UserRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -28,12 +34,38 @@ public class JobApplicationService {
         this.userRepository = userRepository;
     }
 
-    public List<JobApplicationResponse> listForUser(String email) {
+    private static final int MAX_PAGE_SIZE = 100;
+
+    public PageResponse<JobApplicationResponse> search(
+            String email,
+            ApplicationStatus status,
+            String company,
+            LocalDate dateFrom,
+            LocalDate dateTo,
+            Pageable pageable
+    ) {
         User user = getUser(email);
-        return jobApplicationRepository.findAllByUserIdOrderByCreatedAtDesc(user.getId())
-                .stream()
-                .map(this::toResponse)
-                .toList();
+
+        Specification<JobApplication> spec = JobApplicationSpecifications.ownedBy(user.getId());
+        if (status != null) {
+            spec = spec.and(JobApplicationSpecifications.hasStatus(status));
+        }
+        if (company != null && !company.isBlank()) {
+            spec = spec.and(JobApplicationSpecifications.companyContains(company));
+        }
+        if (dateFrom != null) {
+            spec = spec.and(JobApplicationSpecifications.appliedOnOrAfter(dateFrom));
+        }
+        if (dateTo != null) {
+            spec = spec.and(JobApplicationSpecifications.appliedOnOrBefore(dateTo));
+        }
+
+        if (pageable.getPageSize() > MAX_PAGE_SIZE) {
+            pageable = PageRequest.of(pageable.getPageNumber(), MAX_PAGE_SIZE, pageable.getSort());
+        }
+
+        Page<JobApplication> page = jobApplicationRepository.findAll(spec, pageable);
+        return PageResponse.from(page.map(this::toResponse));
     }
 
     @Transactional
