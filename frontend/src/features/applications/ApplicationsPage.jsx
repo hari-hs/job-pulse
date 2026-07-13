@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useAuth } from '../../context/AuthContext'
 import {
   changeApplicationStatus,
   createApplication,
@@ -12,7 +11,6 @@ import ApplicationForm from './ApplicationForm'
 import StatusHistoryModal from './StatusHistoryModal'
 
 export default function ApplicationsPage() {
-  const { email, fullName, logout } = useAuth()
   const [applications, setApplications] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -66,17 +64,7 @@ export default function ApplicationsPage() {
   }
 
   return (
-    <div className="page">
-      <header className="page-header">
-        <h1>Job Pulse</h1>
-        <div className="page-header-user">
-          <span>{fullName || email}</span>
-          <button type="button" onClick={logout}>
-            Log out
-          </button>
-        </div>
-      </header>
-
+    <>
       <div className="toolbar">
         <button type="button" onClick={() => setEditing('new')}>
           + New Application
@@ -108,6 +96,6 @@ export default function ApplicationsPage() {
       {viewingHistoryFor && (
         <StatusHistoryModal application={viewingHistoryFor} onClose={() => setViewingHistoryFor(null)} />
       )}
-    </div>
+    </>
   )
 }

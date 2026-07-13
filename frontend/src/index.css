@@ -11,6 +11,20 @@
   --shadow:
     rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
 
+  /* Ordinal violet ramp for the status-breakdown chart, validated with the
+     dataviz skill's six-checks script (monotone L, >=0.06 adjacent gaps,
+     light-end contrast, single hue). Index order matches ApplicationStatus:
+     APPLIED..WITHDRAWN, lightest to most saturated. */
+  --chart-ordinal-1: #b3a1fa;
+  --chart-ordinal-2: #9a7ff5;
+  --chart-ordinal-3: #7f5cf0;
+  --chart-ordinal-4: #6b3fe0;
+  --chart-ordinal-5: #5a2fc4;
+  --chart-ordinal-6: #4a24a3;
+  --chart-ordinal-7: #33196f;
+  --chart-muted: #898781;
+  --chart-grid: var(--border);
+
   --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
   --mono: ui-monospace, Consolas, monospace;
 
@@ -37,6 +51,14 @@
     --danger: #f47188;
     --shadow:
       rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
+
+    --chart-ordinal-1: #5c4592;
+    --chart-ordinal-2: #6e56b0;
+    --chart-ordinal-3: #8368c8;
+    --chart-ordinal-4: #9a80d8;
+    --chart-ordinal-5: #b29ce5;
+    --chart-ordinal-6: #c9baef;
+    --chart-ordinal-7: #e2ddf8;
   }
 }
 
