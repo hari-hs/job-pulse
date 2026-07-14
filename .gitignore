@@ -9,6 +9,7 @@
 .idea/
 .vscode/
 *.iml
-
-# Claude Code local session config
 .claude/
+
+# Internal working notes -- not part of the public project
+docs/

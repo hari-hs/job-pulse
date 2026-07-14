@@ -183,6 +183,14 @@ All endpoints except `/api/auth/**` require a valid JWT, and every query is impl
 
 ## 7. Authentication Flow
 
+> **As built:** a single access token (24h expiry), no refresh token. Refresh
+> tokens earn their keep on a system with real session-length requirements
+> and a genuine incentive to minimize a leaked token's blast radius — for
+> this project, the storage/rotation/revocation machinery they require was
+> real complexity for a benefit this system doesn't need yet. The seam is
+> still there if that changes: `AuthResponse` gains a second field, nothing
+> about the resource-server side (§7.3) changes.
+
 1. **Register**: password hashed with BCrypt before storage — plaintext never touches the DB or logs.
 2. **Login**: credentials verified via Spring Security's `AuthenticationManager`; on success, issue:
    - a short-lived **access token** (JWT, e.g. 15 min expiry) — sent in `Authorization: Bearer` header on every request
@@ -251,22 +259,22 @@ src/
 
 ## 11. Development Roadmap (Milestones)
 
-| # | Milestone | Deliverable |
-|---|---|---|
-| M0 | Scaffolding | Spring Boot skeleton + React skeleton + Docker Compose (Postgres) — nothing functional yet, just a running shell |
-| M1 | Auth | Register/login, JWT issuance & validation, password hashing |
-| M2 | Applications CRUD | Backend endpoints + entity/schema, minimal frontend list/form |
-| M3 | Status history | `PATCH /status` endpoint, history table, timeline UI |
-| M4 | Reminders (data layer) | Reminder CRUD, no email yet |
-| M5 | Scheduler + local email | `@Scheduled` job, idempotent claim logic, Mailhog integration |
-| M6 | Dashboard | Aggregate query endpoint + simple charts on frontend |
-| M7 | Search/filter/pagination | Query params on list endpoint, frontend controls |
-| M8 | Frontend polish | Protected routes, auth UX, error states |
-| M9 | Full Dockerization | docker-compose for backend+frontend+db+mailhog, one-command local run |
-| M10 | CI | GitHub Actions: build + test on push |
-| M11 | AWS migration prep | Profile-based config, SES swap verified, notes on Cognito/RDS/S3/CloudFront migration |
+| # | Milestone | Deliverable | Status |
+|---|---|---|---|
+| M0 | Scaffolding | Spring Boot skeleton + React skeleton + Docker Compose (Postgres) — nothing functional yet, just a running shell | Done |
+| M1 | Auth | Register/login, JWT issuance & validation, password hashing | Done (single access token — see §7) |
+| M2 | Applications CRUD | Backend endpoints + entity/schema, minimal frontend list/form | Done |
+| M3 | Status history | `PATCH /status` endpoint, history table, timeline UI | Done |
+| M4 | Reminders (data layer) | Reminder CRUD, no email yet | Done |
+| M5 | Scheduler + local email | `@Scheduled` job, idempotent claim logic, Mailhog integration | Done |
+| M6 | Dashboard | Aggregate query endpoint + simple charts on frontend | Done |
+| M7 | Search/filter/pagination | Query params on list endpoint, frontend controls | Done |
+| M8 | Frontend polish | Protected routes, auth UX, error states | **Skipped** — the app already gates every view on auth state with no real URLs yet to protect; judged not worth the cost at this stage over M9 |
+| M9 | Full Dockerization | docker-compose for backend+frontend+db+mailhog, one-command local run | Done |
+| M10 | CI | GitHub Actions: build + test on push | Planned |
+| M11 | AWS migration prep | Profile-based config, SES swap verified, notes on Cognito/RDS/S3/CloudFront migration | Planned |
 
-Each milestone is small enough to review in one sitting, ends in something runnable, and gets a suggested commit message on approval.
+Each milestone is small enough to review in one sitting and ends in something runnable.
 
 ---
 
