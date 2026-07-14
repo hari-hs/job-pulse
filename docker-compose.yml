@@ -23,5 +23,43 @@ services:
       - "1025:1025" # SMTP -- the backend sends here
       - "8025:8025" # Web UI -- open in a browser to see caught emails
 
+  backend:
+    build: ./backend
+    container_name: jobpulse-backend
+    environment:
+      # DB_PORT is 5432 here, NOT 5433 -- inside the Compose network,
+      # containers talk to postgres's real container port. 5433 only
+      # exists as the *host* mapping above, for tools running outside Docker.
+      DB_HOST: postgres
+      DB_PORT: 5432
+      MAIL_HOST: mailhog
+      MAIL_PORT: 1025
+      JWT_SECRET: docker-compose-local-only-secret-still-not-for-real-deployment
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mailhog:
+        condition: service_started
+    healthcheck:
+      # Spring Boot's own startup time varies a lot by machine load -- seen
+      # anywhere from ~15s to ~90s in practice. start_period gives it that
+      # long before a single failed check counts against `retries` at all.
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 120s
+
+  frontend:
+    build: ./frontend
+    container_name: jobpulse-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
 volumes:
   pgdata:
