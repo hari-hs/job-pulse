@@ -1,5 +1,7 @@
 # Job Pulse
 
+[![CI](https://github.com/hari-hs/job-pulse/actions/workflows/ci.yml/badge.svg)](https://github.com/hari-hs/job-pulse/actions/workflows/ci.yml)
+
 A job application tracker: log applications, move them through a status
 pipeline (applied → phone screen → onsite → offer / rejected), set
 follow-up reminders that actually email you, and see aggregate stats —

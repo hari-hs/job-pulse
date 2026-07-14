@@ -271,7 +271,7 @@ src/
 | M7 | Search/filter/pagination | Query params on list endpoint, frontend controls | Done |
 | M8 | Frontend polish | Protected routes, auth UX, error states | **Skipped** — the app already gates every view on auth state with no real URLs yet to protect; judged not worth the cost at this stage over M9 |
 | M9 | Full Dockerization | docker-compose for backend+frontend+db+mailhog, one-command local run | Done |
-| M10 | CI | GitHub Actions: build + test on push | Planned |
+| M10 | CI | GitHub Actions: build + test on push | Done |
 | M11 | AWS migration prep | Profile-based config, SES swap verified, notes on Cognito/RDS/S3/CloudFront migration | Planned |
 
 Each milestone is small enough to review in one sitting and ends in something runnable.
